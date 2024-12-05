@@ -1,0 +1,108 @@
+#!/usr/bin/env zsh
+
+## env setup
+fpath=(/usr/lib/zsh_libmisc/libmisc.zwc $fpath)
+dc_update_workingdir="$HOME"
+unset dcupdate_buffer
+
+## load modules
+autoload zmkdir
+autoload hexd
+autoload hexud
+autoload isfile
+autoload zrm
+autoload zrmdir
+autoload nrandom
+autoload trandom
+autoload revstr
+autoload zmkfifo
+autoload fox
+autoload fox-fr
+autoload fox-ec
+autoload zelfexec
+autoload zls
+autoload zln
+autoload zmv
+autoload isyes
+
+## generate build-id
+discord_build_rand_id="$(trandom)" &> /dev/null
+
+## directory setup
+dcupdate_preservedir=$(pwd)
+[ ! -d ""$dc_update_workingdir"/.dc_upd_gen/"$discord_build_rand_id"" ] && (cd $dc_update_workingdir; until [ -d .dc_upd_gen ]; do zmkdir .dc_upd_gen; done; cd .dc_upd_gen; until [ -d "$discord_build_rand_id" ]; do zmkdir $discord_build_rand_id; done)
+cd ""$dc_update_workingdir"/.dc_upd_gen/"$discord_build_rand_id""
+print -n '' > PKGBUILD
+print -n '' > .SRCINFO
+
+## begin print PKGBUILD
+#up to & incl package_name
+print -n "23204d61696e7461696e65723a204175746f2047656e657261746f72203c75736572406c6f63616c686f73742e6c6f63616c646f6d61696e3e0a0a706b676e616d653d646973636f72642d7074625f" | hexud > PKGBUILD
+print "$discord_build_rand_id" >> PKGBUILD
+#up to *version=
+print -n "5f706b676e616d653d446973636f72645054420a706b677665723d" | hexud >> PKGBUILD
+
+## fetch user input
+# Need user to specify version to build.
+# I'm well aware this is far, far more complicated than it has to be.
+# Writing this little input buffer was fun. I did it because I felt like it.
+print -n "Enter build version (ex: 0.0.46): "
+while true; do
+  # read single char from term (u0). Disable field separation, globbing, and delimiter.
+  IFS= noglob read -r -k1 -d'' -u0 dc_upd_char_read
+  # hexdump captured character
+  dc_upd_char_read=$(IFS= noglob print -rn "$dc_upd_char_read" | hexd)
+  if [ "$dc_upd_char_read" = '7f' ]; then
+    if [ ! -z "$dcupdate_buffer" ]; then
+      dcupdate_buffer=$(revstr "$dcupdate_buffer")
+      dcupdate_buffer=${dcupdate_buffer:2}
+      dcupdate_buffer=$(revstr "$dcupdate_buffer")
+    fi
+  elif [ "$dc_upd_char_read" = '0a' ] || [ -z "$dc_upd_char_read" ]; then
+    [ ! -z "$dcupdate_buffer" ] && break
+  else
+    if [ -z "$dcupdate_buffer" ]; then
+      dcupdate_buffer="$dc_upd_char_read"
+    else
+      dcupdate_buffer=""$dcupdate_buffer""$dc_upd_char_read""
+    fi
+  fi
+  [ ! -z "$dcupdate_buffer" ] && unset dcupdate_buffer_bin
+  [ ! -z "$dcupdate_buffer" ] && dcupdate_buffer_bin="$(print -rn "$dcupdate_buffer" | hexud)"
+  print -n "\e[2K\r"
+  print -n "Enter build version (ex: 0.0.46): "
+  [ ! -z "$dcupdate_buffer" ] && IFS= noglob print -rn "$dcupdate_buffer_bin"
+done
+# check for empty version num
+[ -z "$dcupdate_buffer" ] && return 1
+# print version number
+dcupdate_buffer=""$dcupdate_buffer"0a"
+print -rn "$dcupdate_buffer" | hexud >> PKGBUILD
+# up to build desc
+IFS= noglob print -rn "706b6772656c3d310a706b67646573633d27416c6c2d696e2d6f6e6520766f69636520616e642074657874206368617420666f722067616d657273202d207075626c69632074657374206275696c642028" | hexud >> PKGBUILD
+print -n "$discord_build_rand_id" >> PKGBUILD
+print -n ')' >> PKGBUILD
+IFS= noglob print -rn "27" | hexud >> PKGBUILD
+print '' >> PKGBUILD
+# up to/not incl sha512sums
+IFS= noglob print -rn "617263683d28277838365f363427290a75726c3d2768747470733a2f2f646973636f72646170702e636f6d270a6c6963656e73653d2827637573746f6d27290a6f7074696f6e733d28217374726970290a646570656e64733d28276c69626e6f746966792720276c69627873732720276e7370722720276e737327202767746b3327290a636f6e666c696374733d2827646973636f72642d70746227290a6f7074646570656e64733d28276c696270756c73653a2050756c7365617564696f20737570706f7274270a202020202020202020202020277864672d7574696c733a204f70656e2066696c6573270a202020202020202020202020276e6f746f2d666f6e74732d636a6b3a20466f6e7420666f72207370656369616c20636861726163746572732073756368206173202f73687275672066616365270a20202020202020202020202027656d6f6a692d666f6e743a20466f6e747320666f7220656d6f6a6920737570706f727427290a736f757263653d282268747470733a2f2f646c2d7074622e646973636f72646170702e6e65742f617070732f6c696e75782f24706b677665722f646973636f72642d7074622d24706b677665722e7461722e677a220a2020202020202020274c4943454e53452e68746d6c3a3a68747470733a2f2f646973636f72646170702e636f6d2f7465726d73270a2020202020202020274f53532d4c4943454e5345532e68746d6c3a3a68747470733a2f2f646973636f72646170702e636f6d2f6c6963656e73657327290a" | hexud >> PKGBUILD
+# sha512sums (skip all)
+IFS= noglob print -rn "73686135313273756d733d2827534b4950270a20202020202020202020202027534b4950270a20202020202020202020202027534b495027290a0a" | hexud >> PKGBUILD
+# provides discord-ptb
+IFS= noglob print -rn "70726f76696465733d2827646973636f72642d70746227290a" | hexud >> PKGBUILD
+# conflicts discord-ptb
+IFS= noglob print -rn "636f6e666c696374733d2827646973636f72642d70746227290a" | hexud >> PKGBUILD
+# script body (build, package, etc)
+IFS= noglob print -rn "707265706172652829207b0a2020636420245f706b676e616d650a2020736564202d692022737c457865633d2e2a7c457865633d2f7573722f62696e2f646973636f72642d7074627c2220646973636f72642d7074622e6465736b746f700a2020736564202d692022737c53746172747570574d436c6173733d2e2a7c53746172747570574d436c6173733d646973636f72642d7074627c2220646973636f72642d7074622e6465736b746f700a20206563686f2027506174683d2f7573722f62696e27203e3e20646973636f72642d7074622e6465736b746f700a7d0a0a7061636b6167652829207b0a2020696e7374616c6c202d64202224706b67646972222f6f70742f646973636f72642d7074620a20206370202d6120245f706b676e616d652f2e202224706b67646972222f6f70742f646973636f72642d7074620a0a202063686d6f6420373535202224706b67646972222f6f70742f646973636f72642d7074622f245f706b676e616d650a0a2020726d202224706b67646972222f6f70742f646973636f72642d7074622f706f7374696e73742e73680a0a2020696e7374616c6c202d64202224706b67646972222f7573722f7b62696e2c73686172652f7b7069786d6170732c6170706c69636174696f6e737d7d0a20206c6e202d73202f6f70742f646973636f72642d7074622f245f706b676e616d65202224706b67646972222f7573722f62696e2f646973636f72642d7074620a20206c6e202d73202f6f70742f646973636f72642d7074622f646973636f72642e706e67202224706b67646972222f7573722f73686172652f7069786d6170732f646973636f72642d7074622e706e670a20206c6e202d73202f6f70742f646973636f72642d7074622f646973636f72642d7074622e6465736b746f70202224706b67646972222f7573722f73686172652f6170706c69636174696f6e732f646973636f72642d7074622e6465736b746f700a0a20202320736574756964206f6e206368726f6d652d73616e64626f780a202063686d6f6420752b73202224706b67646972222f6f70742f646973636f72642d7074622f6368726f6d652d73616e64626f780a0a2020696e7374616c6c202d446d363434204c4943454e53452e68746d6c202224706b67646972222f7573722f73686172652f6c6963656e7365732f646973636f72642d7074622f4c4943454e53452e68746d6c0a2020696e7374616c6c202d446d363434204f53532d4c4943454e5345532e68746d6c202224706b67646972222f7573722f73686172652f6c6963656e7365732f646973636f72642d7074622f4f53532d4c4943454e5345532e68746d6c0a7d0a" | hexud >> PKGBUILD
+
+#build package if makepkg found
+if which makepkg &> /dev/null; then
+  makepkg --printsrcinfo > .SRCINFO || return 1
+  makepkg || return 1
+fi
+
+print
+print "generated at "$(pwd)""
+print
+isyes "Install package? (Y/n)" && \
+  sudo pacman -U $(pwd)/*.pkg.tar*
